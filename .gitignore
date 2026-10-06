@@ -1,0 +1,54 @@
+# Unity generated
+/[Ll]ibrary/
+/[Tt]emp/
+/[Oo]bj/
+/[Bb]uild/
+/[Bb]uilds/
+/[Ll]ogs/
+/[Uu]ser[Ss]ettings/
+/[Mm]emoryCaptures/
+/[Rr]ecordings/
+/.utmp/
+
+# Build outputs (Mac .app bundles, Quest APKs, symbol/debug folders)
+*.app/
+*.apk
+*.aab
+*.zip
+*_BurstDebugInformation_DoNotShip/
+*_BackUpThisFolder_ButDontShipItWithYourGame/
+/quest_log.txt
+
+# IDE / solution files Unity regenerates
+*.csproj
+*.sln
+*.slnx
+*.suo
+*.user
+*.userprefs
+*.pidb
+*.booproj
+*.svd
+*.pdb
+*.mdb
+*.opendb
+*.VC.db
+.vs/
+.vscode/
+.idea/
+.consulo/
+*.DotSettings.user
+
+# Crash / tooling
+sysinfo.txt
+crashlytics-build.properties
+*.pidb.meta
+*.pdb.meta
+*.mdb.meta
+
+# AI tooling / local config
+.claude/
+
+# OS
+.DS_Store
+Thumbs.db

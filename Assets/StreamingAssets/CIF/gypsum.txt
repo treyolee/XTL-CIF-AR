@@ -1,0 +1,52 @@
+data_global
+_chemical_name_mineral 'Gypsum'
+loop_
+_publ_author_name
+'Schofield P F'
+'Knight K S'
+'Stretton I C'
+_journal_name_full 'American Mineralogist'
+_journal_volume 81 
+_journal_year 1996
+_journal_page_first 847
+_journal_page_last 851
+_publ_section_title
+;
+ Thermal expansion of gypsum investigated by neutron powder diffraction
+ T = 4.2 K
+;
+_database_code_amcsd 0001807
+_chemical_formula_sum 'Ca S O6 D4'
+_cell_length_a 5.6740
+_cell_length_b 15.1049
+_cell_length_c 6.4909
+_cell_angle_alpha 90
+_cell_angle_beta 118.513
+_cell_angle_gamma 90
+_cell_volume 488.829
+_exptl_crystal_density_diffrn      2.394
+_symmetry_space_group_name_H-M 'I 1 2/a 1'
+loop_
+_space_group_symop_operation_xyz
+  'x,y,z'
+  '1/2+x,1/2+y,1/2+z'
+  '-x,y,1/2-z'
+  '1/2-x,1/2+y,-z'
+  '1/2+x,1/2-y,z'
+  '+x,-y,1/2+z'
+  '1/2-x,1/2-y,1/2-z'
+  '-x,-y,-z'
+loop_
+_atom_site_label
+_atom_site_fract_x
+_atom_site_fract_y
+_atom_site_fract_z
+_atom_site_U_iso_or_equiv
+Ca   0.50000   0.07996   0.25000   0.00124
+S   0.00000   0.07667   0.75000   0.00132
+O1   0.96413   0.13282   0.55028   0.00376
+O2   0.75763   0.02194   0.66427   0.00355
+Ow   0.38342   0.17240   0.46179   0.00403
+D1   0.25369   0.16662   0.50769   0.01809
+D2   0.40549   0.24481   0.49322   0.01631
+

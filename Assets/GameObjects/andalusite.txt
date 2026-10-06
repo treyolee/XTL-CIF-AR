@@ -1,0 +1,65 @@
+data_global
+_chemical_name_mineral 'Andalusite'
+loop_
+_publ_author_name
+'Winter J K'
+'Ghose S'
+_journal_name_full 'American Mineralogist'
+_journal_volume 64 
+_journal_year 1979
+_journal_page_first 573
+_journal_page_last 586
+_publ_section_title
+;
+ Thermal expansion and high-temperature crystal chemistry of the Al2SiO5 polymorphs
+ T = 25 deg C
+;
+_database_code_amcsd 0000728
+_chemical_formula_sum 'Al2 Si O5'
+_cell_length_a 7.7980
+_cell_length_b 7.9031
+_cell_length_c 5.5566
+_cell_angle_alpha 90
+_cell_angle_beta 90
+_cell_angle_gamma 90
+_cell_volume 342.444
+_exptl_crystal_density_diffrn      3.143
+_symmetry_space_group_name_H-M 'P n n m'
+loop_
+_space_group_symop_operation_xyz
+  'x,y,z'
+  '1/2+x,1/2-y,1/2+z'
+  '1/2-x,1/2+y,1/2-z'
+  '1/2-x,1/2+y,1/2+z'
+  '1/2+x,1/2-y,1/2-z'
+  'x,y,-z'
+  '-x,-y,z'
+  '-x,-y,-z'
+loop_
+_atom_site_label
+_atom_site_fract_x
+_atom_site_fract_y
+_atom_site_fract_z
+Al1   0.00000   0.00000   0.24190
+Al2   0.37050   0.13910   0.50000
+Si   0.24600   0.25200   0.00000
+Oa   0.42460   0.36290   0.00000
+Ob   0.10300   0.40030   0.00000
+Oc   0.42330   0.36290   0.50000
+Od   0.23050   0.13390   0.23940
+loop_
+_atom_site_aniso_label
+_atom_site_aniso_U_11
+_atom_site_aniso_U_22
+_atom_site_aniso_U_33
+_atom_site_aniso_U_12
+_atom_site_aniso_U_13
+_atom_site_aniso_U_23
+Al1 0.00647 0.00918 0.00360 0.00156 0.00000 0.00000
+Al2 0.00277 0.00823 0.00438 0.00000 0.00000 0.00000
+Si 0.00216 0.00759 0.00391 0.00000 0.00000 0.00000
+Oa 0.00339 0.00981 0.00485 -0.00187 0.00000 0.00000
+Ob 0.00308 0.00854 0.01345 0.00062 0.00000 0.00000
+Oc 0.00555 0.00886 0.00469 -0.00094 0.00000 0.00000
+Od 0.00493 0.01013 0.00469 -0.00125 -0.00088 0.00111
+
