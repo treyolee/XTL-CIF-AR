@@ -1,4 +1,4 @@
-# Crystallography — Mixed-Reality Crystal Structure Viewer
+# XTL CIF-AR — Mixed-Reality Crystal Structure Viewer
 
 An NSF-funded teaching tool that turns standard crystallographic information files (CIF) into interactive 3-D crystal structures you can walk around, grab, scale, and measure in mixed reality on Meta Quest headsets. It also runs as a desktop app on macOS.
 
@@ -28,7 +28,7 @@ Works on Quest 3, Quest 3S, and Quest Pro.
    - [SideQuest](https://sidequestvr.com/) — connect by USB and use *Install APK from folder*.
    - Command line, if you have Android platform-tools:
      ```bash
-     adb install -r Crystallography.apk
+     adb install -r XTL-CIF-AR.apk
      ```
 4. In the headset, open **Library → Unknown Sources** and launch the app.
 

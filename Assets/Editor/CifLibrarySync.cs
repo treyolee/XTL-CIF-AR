@@ -25,7 +25,7 @@ public class CifLibrarySync : IPreprocessBuildWithReport
 
     public void OnPreprocessBuild(BuildReport report) => Sync(logSummary: true);
 
-    [MenuItem("Tools/Crystallography/Sync CIF Library")]
+    [MenuItem("Tools/XTL CIF-AR/Sync CIF Library")]
     private static void SyncMenu()
     {
         Sync(logSummary: true);
