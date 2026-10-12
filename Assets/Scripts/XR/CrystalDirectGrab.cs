@@ -46,6 +46,13 @@ public class CrystalDirectGrab : MonoBehaviour
     private float _baseDist;
     private Vector3 _baseScale, _baseMid, _baseCrystalPos;
 
+    // Crystal bounds are cached in the crystal's LOCAL frame on each rebuild (atoms don't move
+    // between builds) and transformed per frame — avoids a GetComponentsInChildren allocation
+    // every Update, which showed up as GC hitches on the headset.
+    private CrystalCIFViewer _viewer;
+    private Bounds _localBounds;
+    private bool _hasLocalBounds;
+
     private static readonly XRHandJointID[] Tips =
     { XRHandJointID.IndexTip, XRHandJointID.MiddleTip, XRHandJointID.RingTip, XRHandJointID.LittleTip };
 
@@ -57,9 +64,28 @@ public class CrystalDirectGrab : MonoBehaviour
 
     public void ForceRelease() { _grabL = _grabR = _oneActive = _twoActive = false; }
 
+    private void OnEnable()
+    {
+        if (crystal != null && _viewer == null)
+        {
+            _viewer = crystal.GetComponent<CrystalCIFViewer>();
+            if (_viewer != null) _viewer.OnCrystalBuilt += OnBuilt;
+        }
+        _hasLocalBounds = false;
+    }
+
+    private void OnDisable()
+    {
+        if (_viewer != null) _viewer.OnCrystalBuilt -= OnBuilt;
+        _viewer = null;
+    }
+
+    private void OnBuilt(CrystalCIFViewer.CrystalModel _) => _hasLocalBounds = false;
+
     private void Update()
     {
         if (crystal == null) return;
+        if (_viewer == null) OnEnable();   // crystal assigned after enable
         EnsureSubsystem();
         if (_subsys == null || !_subsys.running) return;
 
@@ -173,11 +199,23 @@ public class CrystalDirectGrab : MonoBehaviour
 
     private Bounds CrystalBounds()
     {
-        var atoms = crystal.GetComponentsInChildren<AtomInfo>();
-        if (atoms.Length == 0) return new Bounds(crystal.position, Vector3.one * 0.1f);
-        var b = new Bounds(atoms[0].transform.position, Vector3.zero);
-        foreach (var a in atoms) b.Encapsulate(a.transform.position);
-        return b;
+        if (!_hasLocalBounds)
+        {
+            var atoms = crystal.GetComponentsInChildren<AtomInfo>();
+            if (atoms.Length == 0) return new Bounds(crystal.position, Vector3.one * 0.1f);
+            _localBounds = new Bounds(atoms[0].transform.localPosition, Vector3.zero);
+            foreach (var a in atoms) _localBounds.Encapsulate(a.transform.localPosition);
+            _hasLocalBounds = true;
+        }
+        // Local → world: transform the 8 corners (handles rotation + scale).
+        var c = _localBounds.center; var e = _localBounds.extents;
+        var w = new Bounds(crystal.TransformPoint(c), Vector3.zero);
+        for (int i = 0; i < 8; i++)
+        {
+            var corner = c + new Vector3((i & 1) == 0 ? -e.x : e.x, (i & 2) == 0 ? -e.y : e.y, (i & 4) == 0 ? -e.z : e.z);
+            w.Encapsulate(crystal.TransformPoint(corner));
+        }
+        return w;
     }
 
     private void EnsureSubsystem()

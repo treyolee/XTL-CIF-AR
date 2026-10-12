@@ -9,6 +9,7 @@
 // Controls: trigger = point/click · grip = grab crystal or tablet ·
 //           A/X = show/hide tablet · B/Y = recentre in front of the user.
 
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Rendering.Universal;
 using UnityEngine.XR;
@@ -50,6 +51,13 @@ public class XRSpatialUI : MonoBehaviour
         // it during startup. Desktop is untouched (guarded so the Mac build keeps its camera).
         if (Application.platform == RuntimePlatform.Android || XRSettings.isDeviceActive)
             TryEnablePassthrough();
+        else if (GetComponent<DesktopCameraFramer>() == null)
+        {
+            // Mac / Editor without a headset: the scene's only camera is the XR Origin head
+            // camera, which nothing drives here — frame it on the crystal.
+            var framer = gameObject.AddComponent<DesktopCameraFramer>();
+            framer.viewer = _viewer;
+        }
     }
 
     private void Update()
@@ -176,6 +184,32 @@ public class XRSpatialUI : MonoBehaviour
             {
                 transform.SetParent(_trackingSpace, true);
                 Debug.Log($"[XRSpatialUI] Content anchored to tracking space '{_trackingSpace.name}'.");
+            }
+
+            // Hundreds of atom colliders with no Rigidbody are STATIC colliders; moving them every
+            // frame (fist-grab, placement) forces PhysX to rebuild its static tree each frame.
+            // One kinematic Rigidbody on the root turns them into a single cheap compound body.
+            var rb = GetComponent<Rigidbody>();
+            if (rb == null) rb = gameObject.AddComponent<Rigidbody>();
+            rb.isKinematic = true;
+            rb.useGravity = false;
+            rb.interpolation = RigidbodyInterpolation.None;
+
+            // Let the XR runtime own frame pacing (72/90 Hz); never cap it from script.
+            Application.targetFrameRate = -1;
+        });
+
+        Step("foveation", () =>
+        {
+            // Fixed foveated rendering via Unity's OpenXR Foveated Rendering feature: sharp
+            // centre, cheaper periphery. Big GPU saving on Quest at no visible cost for a
+            // tabletop app where the crystal sits where you're looking.
+            var displays = new List<XRDisplaySubsystem>();
+            SubsystemManager.GetSubsystems(displays);
+            foreach (var d in displays)
+            {
+                d.foveatedRenderingLevel = 1f;
+                d.foveatedRenderingFlags = XRDisplaySubsystem.FoveatedRenderingFlags.None;
             }
         });
 
@@ -451,7 +485,11 @@ public class XRSpatialUI : MonoBehaviour
             if (FindAnyObjectByType<ARSession>() == null)
             {
                 var s = new GameObject("AR Session");
-                s.AddComponent<ARSession>();
+                var session = s.AddComponent<ARSession>();
+                // Never let AR Foundation clamp Application.targetFrameRate to a camera rate —
+                // on Quest the XR display drives pacing and a cap just makes the compositor
+                // reproject (judder when turning your head, sluggish system UI).
+                session.matchFrameRateRequested = false;
                 s.AddComponent<ARInputManager>();
                 Debug.Log("[XRSpatialUI] Created AR Session (+ARInputManager).");
             }
@@ -462,11 +500,10 @@ public class XRSpatialUI : MonoBehaviour
                     cam.gameObject.AddComponent<ARCameraManager>();
                     Debug.Log("[XRSpatialUI] Added ARCameraManager to eye camera.");
                 }
-                if (cam.GetComponent<ARCameraBackground>() == null)
-                {
-                    cam.gameObject.AddComponent<ARCameraBackground>();
-                    Debug.Log("[XRSpatialUI] Added ARCameraBackground to eye camera.");
-                }
+                // Passthrough on Meta OpenXR is a compositor layer driven by ARCameraManager;
+                // ARCameraBackground is for handheld AR and does nothing useful here.
+                var bg = cam.GetComponent<ARCameraBackground>();
+                if (bg != null && bg.enabled) { bg.enabled = false; Debug.Log("[XRSpatialUI] Disabled ARCameraBackground (not used on Quest)."); }
             }
         }
         catch (System.Exception e)

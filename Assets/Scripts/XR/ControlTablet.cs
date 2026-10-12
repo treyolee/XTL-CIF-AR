@@ -283,7 +283,7 @@ public class ControlTablet : MonoBehaviour
     {
         Header(c, "PRESSURE  ·  BIRCH–MURNAGHAN");
 
-        _pressureVal = WorldUIKit.MakeText(c, "0.0 GPa", 40f, WorldUIStyle.Accent,
+        _pressureVal = WorldUIKit.MakeText(c, "0 GPa", 40f, WorldUIStyle.Accent,
             new Vector2(240, 56), new Vector2(0, -46f), new Vector2(0, 1), new Vector2(0, 1),
             TextAnchor.MiddleLeft, bold: true);
 
@@ -291,10 +291,11 @@ public class ControlTablet : MonoBehaviour
             new Vector2(540f, 40f), new Vector2(0, -112f),
             v =>
             {
-                if (_pressureVal != null) _pressureVal.text = $"{v:F1} GPa";
+                if (_pressureVal != null) _pressureVal.text = $"{v:F0} GPa";
                 UpdatePressureInfo(v);
             },
             () => viewer.SetPressure(_pressure.Value));
+        _pressure.Step = 1f;   // whole GPa
 
         _k0Val = WorldUIKit.MakeStepper(c, "K0", new Vector2(0, -184f),
             () => Mathf.RoundToInt(viewer.bulkModulusK0),
@@ -427,7 +428,7 @@ public class ControlTablet : MonoBehaviour
         if (_bondMinVal != null) _bondMinVal.text = $"{viewer.bondMinAngstrom:F2} Å";
         if (_bondMaxVal != null) _bondMaxVal.text = $"{viewer.bondMaxAngstrom:F2} Å";
         _pressure?.SetWithoutNotify(viewer.pressureGPa);
-        if (_pressureVal != null) _pressureVal.text = $"{viewer.pressureGPa:F1} GPa";
+        if (_pressureVal != null) _pressureVal.text = $"{viewer.pressureGPa:F0} GPa";
         if (_k0Val != null) _k0Val.text = Mathf.RoundToInt(viewer.bulkModulusK0).ToString();
         UpdatePressureInfo(viewer.pressureGPa);
         _cellToggle?.SetWithoutNotify(viewer.showUnitCell);

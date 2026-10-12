@@ -361,16 +361,24 @@ public static class WorldUIKit
         UIText val = null;
         MakeButton(parent, "-", null, new Vector2(48f, 44f),
             anchoredPos + new Vector2(52f, 0),
-            () => { set(Mathf.Clamp(get() - step, min, max)); if (val != null) val.text = get().ToString(); onChanged(); });
+            () => { set(Snap(get() - step, step, min, max)); if (val != null) val.text = get().ToString(); onChanged(); });
 
         val = MakeText(parent, get().ToString(), 26f, WorldUIStyle.TextMain, new Vector2(70f, 44f),
             anchoredPos + new Vector2(104f, 0), new Vector2(0, 1), new Vector2(0, 1), TextAnchor.MiddleCenter, true);
 
         MakeButton(parent, "+", null, new Vector2(48f, 44f),
             anchoredPos + new Vector2(178f, 0),
-            () => { set(Mathf.Clamp(get() + step, min, max)); if (val != null) val.text = get().ToString(); onChanged(); });
+            () => { set(Snap(get() + step, step, min, max)); if (val != null) val.text = get().ToString(); onChanged(); });
 
         return val;
+    }
+
+    // Round to the nearest multiple of `step`, then clamp — so a stepper always shows
+    // "round" values (K0 in multiples of 5 GPa) even if the starting value wasn't one.
+    public static int Snap(int value, int step, int min, int max)
+    {
+        if (step > 1) value = Mathf.RoundToInt(value / (float)step) * step;
+        return Mathf.Clamp(value, min, max);
     }
 
     // ── Procedural sprites ────────────────────────────────────────────────────
@@ -527,6 +535,8 @@ public class WorldSlider : MonoBehaviour, IWorldInteractable
     private Action _onCommit;
 
     public float Value => _value;
+    /// <summary>Snap dragged values to multiples of this (0 = continuous).</summary>
+    public float Step;
 
     public void Init(float min, float max, float value, RectTransform fill, RectTransform handle,
                      float widthPx, Action<float> onChanged, Action onCommit)
@@ -566,6 +576,7 @@ public class WorldSlider : MonoBehaviour, IWorldInteractable
         Vector3 local = transform.InverseTransformPoint(worldPoint); // pivot top-left
         float t = Mathf.Clamp01(local.x / _widthPx);
         _value = Mathf.Lerp(_min, _max, t);
+        if (Step > 0f) _value = Mathf.Round(_value / Step) * Step;
         SetWithoutNotify(_value);
         _onChanged?.Invoke(_value);
     }

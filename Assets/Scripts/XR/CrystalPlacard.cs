@@ -74,13 +74,12 @@ public class CrystalPlacard : MonoBehaviour
         var met = m.Metrics;
         _title.text = m.Title ?? "Crystal";
         string sys = CrystalInteraction.CrystalSystem(m.SpaceGroupNumber, m.SpaceGroupName);
-        string sg  = m.SpaceGroupName ?? "?";
-        _sg.text    = $"{sg}{(m.SpaceGroupNumber > 0 ? $"  (#{m.SpaceGroupNumber})" : "")}   ·   {sys}";
+        _sg.text    = sys;
         _cellA.text = $"a {met.a:F3} Å    b {met.b:F3} Å    c {met.c:F3} Å";
         // Spelled-out angle names: TMP's default atlas has no Greek glyphs.
         _cellB.text = $"alpha {met.alpha:F2}°   beta {met.beta:F2}°   gamma {met.gamma:F2}°";
         float vol = CellVolume(met);
-        _vol.text   = $"V {vol:F1} Å³    ·    {m.Atoms.Count} atoms (asym.)";
+        _vol.text   = $"V {vol:F1} Å³";
 
         RebuildLegend(m);
     }

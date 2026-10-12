@@ -395,7 +395,15 @@ public class CrystalInteraction : MonoBehaviour
             _crystalInfoText.text = BuildCrystalInfoString(model);
         RefreshStyleBar();
         RefreshBondSliders();
+        RefreshPressureSlider();
         RebuildLegend(model);
+    }
+
+    private void RefreshPressureSlider()
+    {
+        if (_pressureSlider != null) _pressureSlider.SetValueWithoutNotify(_viewer.pressureGPa);
+        if (_pressureVal != null) _pressureVal.text = $"{_viewer.pressureGPa:F0}";
+        RefreshPressureReadout(_viewer.pressureGPa);
     }
 
     private static string BuildCrystalInfoString(CrystalCIFViewer.CrystalModel m)
@@ -403,11 +411,10 @@ public class CrystalInteraction : MonoBehaviour
         var met = m.Metrics;
         float vol = CellVolume(met);
         return $"<b>{m.Title}</b>\n" +
-               $"Space group: <b>{m.SpaceGroupName ?? "?"}</b>{(m.SpaceGroupNumber > 0 ? $"  (#{m.SpaceGroupNumber})" : "")}\n" +
                $"Crystal system: {CrystalSystem(m.SpaceGroupNumber, m.SpaceGroupName)}\n" +
                $"a = {met.a:F4} Å    b = {met.b:F4} Å    c = {met.c:F4} Å\n" +
                $"α = {met.alpha:F3}°   β = {met.beta:F3}°   γ = {met.gamma:F3}°\n" +
-               $"V = {vol:F2} Å³     ASU atoms: {m.Atoms.Count}";
+               $"V = {vol:F2} Å³";
     }
 
     private static float CellVolume(CrystalCIFViewer.CellMetrics m)
@@ -931,14 +938,15 @@ public class CrystalInteraction : MonoBehaviour
     {
         AddLabel(parent, font, "Pressure (GPa)", new Vector2(10, -8))
             .GetComponent<RectTransform>().sizeDelta = new Vector2(150, 16);
-        _pressureVal = AddLabel(parent, font, $"{_viewer.pressureGPa:F1}", new Vector2(210, -8));
+        _pressureVal = AddLabel(parent, font, $"{_viewer.pressureGPa:F0}", new Vector2(210, -8));
         _pressureVal.GetComponent<RectTransform>().sizeDelta = new Vector2(70, 16);
 
         _pressureSlider = AddSlider(parent, font, new Vector2(10, -34), 0f, 136f, _viewer.pressureGPa, out _);
         _pressureSlider.GetComponent<RectTransform>().sizeDelta = new Vector2(270, 16);
+        _pressureSlider.wholeNumbers = true;   // 1 GPa steps
         _pressureSlider.onValueChanged.AddListener(v =>
         {
-            if (_pressureVal != null) _pressureVal.text = $"{v:F1}";
+            if (_pressureVal != null) _pressureVal.text = $"{v:F0}";
             RefreshPressureReadout(v);          // live estimate while dragging
         });
         AddSliderCommit(_pressureSlider, () => _viewer.SetPressure(_pressureSlider.value));
@@ -1095,7 +1103,7 @@ public class CrystalInteraction : MonoBehaviour
         Text val = null;
         AddButton(parent, font, "-", new Vector2(pos.x + 20, pos.y), new Vector2(24, 20), () =>
         {
-            set(Mathf.Clamp(get() - step, min, max));
+            set(WorldUIKit.Snap(get() - step, step, min, max));
             if (val != null) val.text = get().ToString();
             onChanged();
         });
@@ -1106,7 +1114,7 @@ public class CrystalInteraction : MonoBehaviour
 
         AddButton(parent, font, "+", new Vector2(pos.x + 90, pos.y), new Vector2(24, 20), () =>
         {
-            set(Mathf.Clamp(get() + step, min, max));
+            set(WorldUIKit.Snap(get() + step, step, min, max));
             if (val != null) val.text = get().ToString();
             onChanged();
         });

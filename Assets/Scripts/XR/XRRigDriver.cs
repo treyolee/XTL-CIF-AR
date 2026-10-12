@@ -4,6 +4,7 @@
 // its anchors are used as-is. Otherwise a minimal rig is created and driven every frame from
 // UnityEngine.XR.InputDevices, which works under both the Oculus XR plugin and OpenXR.
 
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.XR;
 using UnityEngine.XR.Hands;   // Unity XR Hands — MetaAimHand aim pose + pinch (MissionPlanning stack)
@@ -154,10 +155,70 @@ public class XRRigDriver : MonoBehaviour
     private static bool UnityAimValid(MetaAimHand a) =>
         UnityAimReady(a) && ((MetaAimFlags)a.aimFlags.ReadValue() & MetaAimFlags.Valid) != 0;
 
+    // ── Joint-based fallback (XR Hands subsystem) ────────────────────────────
+    // Meta only flags the aim pose Valid in a deliberate pointing posture; while the hand is
+    // still tracked but the flag is down, the laser used to vanish and pinches were ignored.
+    // Fall back to a ray from the index knuckle aimed from an estimated shoulder point (the
+    // same stable model Meta's own aim uses) and a tip-to-tip index pinch for select.
+    private XRHandSubsystem _handSub;
+    private static readonly List<XRHandSubsystem> _handSubBuf = new();
+    private bool _jointPinchL, _jointPinchR;
+
+    private bool TryJointHand(XRNode node, out XRHand hand)
+    {
+        hand = default;
+        if (_handSub == null || !_handSub.running)
+        {
+            SubsystemManager.GetSubsystems(_handSubBuf);
+            _handSub = _handSubBuf.Count > 0 ? _handSubBuf[0] : null;
+            if (_handSub == null) return false;
+        }
+        hand = node == XRNode.LeftHand ? _handSub.leftHand : _handSub.rightHand;
+        return hand.isTracked;
+    }
+
+    private bool TryJointWorld(XRHand hand, XRHandJointID id, out Vector3 world)
+    {
+        world = default;
+        if (!hand.GetJoint(id).TryGetPose(out Pose p)) return false;
+        Transform space = Head != null ? Head.parent : null;
+        world = space != null ? space.TransformPoint(p.position) : p.position;
+        return true;
+    }
+
+    private bool JointTracked(XRNode node) => TryJointHand(node, out _);
+
+    private Ray? JointRay(XRNode node)
+    {
+        if (!TryJointHand(node, out var hand)) return null;
+        if (!TryJointWorld(hand, XRHandJointID.IndexProximal, out Vector3 knuckle)) return null;
+        Vector3 dir = Vector3.forward;
+        if (Head != null)
+        {
+            Vector3 fwd = Head.forward; fwd.y = 0f;
+            if (fwd.sqrMagnitude < 1e-4f) fwd = Vector3.forward;
+            var yaw = Quaternion.LookRotation(fwd.normalized, Vector3.up);
+            Vector3 shoulder = Head.position + yaw * new Vector3(node == XRNode.LeftHand ? -0.17f : 0.17f, -0.15f, -0.05f);
+            dir = (knuckle - shoulder).normalized;
+        }
+        return new Ray(knuckle, dir);
+    }
+
+    private bool JointPinch(XRNode node)
+    {
+        ref bool st = ref (node == XRNode.LeftHand ? ref _jointPinchL : ref _jointPinchR);
+        if (!TryJointHand(node, out var hand) ||
+            !TryJointWorld(hand, XRHandJointID.IndexTip, out var tipI) ||
+            !TryJointWorld(hand, XRHandJointID.ThumbTip, out var tipT)) { st = false; return false; }
+        float d = Vector3.Distance(tipI, tipT);
+        st = st ? d < 0.035f : d < 0.02f;   // hysteresis
+        return st;
+    }
+
     private Ray? UnityAimRay(XRNode node)
     {
         var a = UnityAimFor(node);
-        if (!UnityAimValid(a)) return null;
+        if (!UnityAimValid(a)) return JointRay(node);
         Vector3 p = a.devicePosition.ReadValue();
         Quaternion r = a.deviceRotation.ReadValue();
         Transform space = Head != null ? Head.parent : null;
@@ -233,7 +294,9 @@ public class XRRigDriver : MonoBehaviour
     /// <summary>May this side interact right now? (controller actively tracked, or hand aiming)</summary>
     public bool IsPointerAvailable(XRNode node)
     {
-        if (UnityAimReady(UnityAimFor(node))) return UnityAimValid(UnityAimFor(node));
+        var ua = UnityAimFor(node);
+        if (UnityAimReady(ua) && UnityAimValid(ua)) return true;
+        if (JointTracked(node)) return true;          // tracked hand, aim flag down → joint ray
         var h = HandFor(node);
         if (h != null && h.IsTracked) return HandAiming(h);
         return ControllerTracked(node);
@@ -243,8 +306,8 @@ public class XRRigDriver : MonoBehaviour
     public bool GetSelect(XRNode node)
     {
         var ua = UnityAimFor(node);
-        if (UnityAimReady(ua))
-            return UnityAimValid(ua) && ua.indexPressed.ReadValue() > 0.5f;
+        if (UnityAimReady(ua) && UnityAimValid(ua)) return ua.indexPressed.ReadValue() > 0.5f;
+        if (JointTracked(node)) return JointPinch(node);
         var h = HandFor(node);
         if (h != null && h.IsTracked)
             return HandAiming(h) && h.GetFingerIsPinching(OVRHand.HandFinger.Index);

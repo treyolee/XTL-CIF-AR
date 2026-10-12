@@ -73,7 +73,7 @@ public class CrystalCIFViewer : MonoBehaviour
     [Tooltip("Applied pressure in GPa. Isotropically compresses the unit cell.")]
     public float pressureGPa = 0f;
     [Tooltip("Zero-pressure bulk modulus K0 in GPa (e.g. ~37 for quartz).")]
-    public float bulkModulusK0 = 37f;
+    public float bulkModulusK0 = 35f;   // GPa; stepped in multiples of 5 (quartz ≈ 37)
 
     [Header("Display Style")]
     public DisplayStyle displayStyle = DisplayStyle.BallAndStick;
@@ -207,7 +207,7 @@ public class CrystalCIFViewer : MonoBehaviour
     // Reset the sliders to this structure's VESTA default (min 0, max = longest pair window).
     private void ApplyDefaultBondRange()
     {
-        bondMinAngstrom = 0f;
+        bondMinAngstrom = 0.7f;   // below any real bond; hides overlap artefacts from disordered sites
         bondMaxAngstrom = _autoBondMax;
     }
 
@@ -338,6 +338,7 @@ public class CrystalCIFViewer : MonoBehaviour
         cifText = null;                 // a file path now drives the build
         cifPath = path;
         _bondRangeUserSet = false;      // new structure → recompute the default bond window
+        pressureGPa = 0f;               // and start it at ambient pressure
         TryBuild();
         return LastBaseModel != null;
     }
