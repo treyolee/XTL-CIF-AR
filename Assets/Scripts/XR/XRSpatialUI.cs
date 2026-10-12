@@ -14,6 +14,8 @@ using UnityEngine;
 using UnityEngine.Rendering.Universal;
 using UnityEngine.XR;
 using UnityEngine.XR.ARFoundation;   // AR Session / camera passthrough (MissionPlanning stack)
+using UnityEngine.XR.OpenXR.Features.Extensions.PerformanceSettings;   // CPU/GPU level hints
+using UnityEngine.XR.OpenXR.Features.Meta;                             // TryRequestDisplayRefreshRate
 
 [RequireComponent(typeof(CrystalCIFViewer))]
 public class XRSpatialUI : MonoBehaviour
@@ -199,6 +201,21 @@ public class XRSpatialUI : MonoBehaviour
             Application.targetFrameRate = -1;
         });
 
+        Step("performance", () =>
+        {
+            // The device log showed the headset idling at CPU/GPU level 2 (1171 / 441 MHz) while
+            // this app ran; the system shell then starves whenever it has to share. Ask for
+            // sustained-high clocks (XR_EXT_performance_settings) and the 90 Hz display mode
+            // (Quest 3/3S/Pro) so passthrough, hands and UI are composited at 90 instead of 72.
+            bool cpu = XrPerformanceSettingsFeature.SetPerformanceLevelHint(PerformanceDomain.Cpu, PerformanceLevelHint.SustainedHigh);
+            bool gpu = XrPerformanceSettingsFeature.SetPerformanceLevelHint(PerformanceDomain.Gpu, PerformanceLevelHint.SustainedHigh);
+            var displays = new List<XRDisplaySubsystem>();
+            SubsystemManager.GetSubsystems(displays);
+            bool hz = false;
+            foreach (var d in displays) hz |= d.TryRequestDisplayRefreshRate(90f);
+            Debug.Log($"[XRSpatialUI] Perf hints cpu:{cpu} gpu:{gpu}  90Hz:{hz}");
+        });
+
         Step("foveation", () =>
         {
             // Fixed foveated rendering via Unity's OpenXR Foveated Rendering feature: sharp
@@ -329,10 +346,16 @@ public class XRSpatialUI : MonoBehaviour
 
     private void OnCrystalRebuilt(CrystalCIFViewer.CrystalModel model)
     {
+        Vector3 oldWorld = _hasCenter ? transform.TransformPoint(_localCenter) : transform.position;
+
+        // A different structure gets re-fitted to the standard size; bond/pressure rebuilds of
+        // the same structure keep whatever size the user has scaled it to.
+        string name = _viewer != null ? _viewer.CurrentStructureName : null;
+        if (_placed && name != _fittedStructure) FitCrystalScale();
+
         Vector3 newLocal = ComputeLocalCenter();
         if (_placed && _hasCenter)
         {
-            Vector3 oldWorld = transform.TransformPoint(_localCenter);
             Vector3 newWorld = transform.TransformPoint(newLocal);
             transform.position += oldWorld - newWorld;   // new structure appears where the old one was
         }
@@ -340,13 +363,32 @@ public class XRSpatialUI : MonoBehaviour
         _hasCenter = true;
     }
 
-    private Vector3 ComputeLocalCenter()
+    [Tooltip("Longest dimension (m) a freshly loaded crystal is scaled to on the headset.")]
+    public float targetCrystalSize = 0.32f;
+    private string _fittedStructure;
+
+    // Scale the crystal so its longest bounds dimension equals targetCrystalSize.
+    private void FitCrystalScale()
+    {
+        var b = ComputeLocalBounds();
+        float maxDim = Mathf.Max(b.size.x, b.size.y, b.size.z);
+        if (maxDim < 1e-4f) return;
+        float s = Mathf.Clamp(targetCrystalSize / maxDim, 0.03f, 4f);
+        transform.localScale = Vector3.one * s;
+        _fittedStructure = _viewer != null ? _viewer.CurrentStructureName : null;
+        Debug.Log($"[XRSpatialUI] Fitted crystal '{_fittedStructure}' (cell {maxDim * 10f:F1} Å across) → scale {s:F2}.");
+    }
+
+    private Vector3 ComputeLocalCenter() => ComputeLocalBounds().center;
+
+    private Bounds ComputeLocalBounds()
     {
         var atoms = transform.GetComponentsInChildren<AtomInfo>();
-        if (atoms.Length == 0) return Vector3.zero;
+        if (atoms.Length == 0) return new Bounds(Vector3.zero, Vector3.zero);
         var b = new Bounds(atoms[0].transform.localPosition, Vector3.zero);
         foreach (var a in atoms) b.Encapsulate(a.transform.localPosition);
-        return b.center;
+        b.Expand(0.06f);   // atom radii
+        return b;
     }
 
     // One-shot status report ~8s in — readable on device via `adb logcat -s Unity`.
@@ -575,14 +617,10 @@ public class XRSpatialUI : MonoBehaviour
         if (_rig == null || _rig.Head == null) return;
         var head = _rig.Head;
 
-        // Heal any runaway scale BEFORE computing bounds — an inflated crystal has its
-        // visual centre metres away from its pivot, which defeats distance-based placement.
-        float s = transform.localScale.x;
-        if (s > 4f || s < 0.2f)
-        {
-            Debug.Log($"[XRSpatialUI] Resetting runaway crystal scale {s:F2} → 1.");
-            transform.localScale = Vector3.one;
-        }
+        // Normalise the crystal to a comfortable tabletop size BEFORE computing bounds. Cells
+        // range from ~3 Å to 20+ Å (0.3–2 m at 1 Å = 10 cm), so a fixed scale either hides the
+        // placard behind a giant cell or leaves a small one unreadable.
+        FitCrystalScale();
 
         Vector3 fwd = head.forward; fwd.y = 0f;
         fwd = fwd.sqrMagnitude > 1e-4f ? fwd.normalized : Vector3.forward;

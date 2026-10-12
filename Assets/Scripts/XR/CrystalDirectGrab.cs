@@ -19,7 +19,7 @@ public class CrystalDirectGrab : MonoBehaviour
     public Transform trackingSpace;               // XR Origin tracking space (Head.parent)
 
     [Header("Scale bounds")]
-    public float minScale = 0.2f;
+    public float minScale = 0.03f;
     public float maxScale = 4f;
 
     [Header("Gesture tuning")]

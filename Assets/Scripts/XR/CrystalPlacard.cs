@@ -15,7 +15,8 @@ public class CrystalPlacard : MonoBehaviour
     private UIText _title, _sg, _cellA, _cellB, _vol;
     private RectTransform _legendRow;
     private readonly List<GameObject> _legendItems = new();
-    private Vector3 _dockOffset = new Vector3(0f, -0.34f, 0f);
+    private float _localRadius = 0.3f;     // bounding radius in the crystal's local frame
+    private const float DockGap = 0.12f;   // metres between crystal bottom and placard centre
 
     public void Build()
     {
@@ -138,7 +139,8 @@ public class CrystalPlacard : MonoBehaviour
 
         // Dock beneath the crystal (cached local centre → world) and yaw toward the viewer.
         Vector3 center = viewer.transform.TransformPoint(_localBoundsCenter);
-        Vector3 target = center + _dockOffset * Mathf.Max(1f, viewer.transform.localScale.x);
+        float drop = _localRadius * viewer.transform.localScale.x + DockGap;
+        Vector3 target = center + Vector3.down * drop;
         transform.position = Vector3.Lerp(transform.position, target, Time.deltaTime * 6f);
 
         Vector3 toHead = head.position - transform.position; toHead.y = 0f;
@@ -157,6 +159,7 @@ public class CrystalPlacard : MonoBehaviour
         var b = new Bounds(atoms[0].transform.localPosition, Vector3.zero);
         foreach (var a in atoms) b.Encapsulate(a.transform.localPosition);
         _localBoundsCenter = b.center;
+        _localRadius = b.extents.magnitude + 0.03f;
         _hasBounds = true;
     }
 }
